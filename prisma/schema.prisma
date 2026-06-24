@@ -1,0 +1,714 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  CLIENT
+  ADMIN
+  MODERATOR
+  SUPPORT
+  FINANCE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum AssetType {
+  TRUCK
+  EQUIPMENT
+  MATERIAL
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  HIRED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum TransactionCategory {
+  INCOME
+  EXPENSE
+  FEE
+}
+
+enum PaymentType {
+  SALARY
+  ALLOWANCE
+  BONUS
+  DEDUCTION
+}
+
+enum MaintenanceType {
+  ROUTINE
+  REPAIR
+  INSPECTION
+  TIRE
+  ENGINE
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum ReversalStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+model User {
+  id             String     @id @default(cuid())
+  fullName       String
+  email          String     @unique
+  emailVerified  DateTime?
+  phone          String?
+  phoneVerified  DateTime?
+  phoneVerificationCode String?
+  phoneVerificationExp  DateTime?
+  passwordHash   String
+  role           UserRole   @default(CLIENT)
+  status         UserStatus @default(ACTIVE)
+  bankCode       String?
+  bankAccountNumber String?
+  resetToken     String?
+  resetTokenExp  DateTime?
+  transferPin    String?
+  transferPinExp DateTime?
+  deactivatedAt  DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  assets          Asset[]
+  drivers         Driver[]
+  transactions    Transaction[]
+  bookingsAsOwner Booking[]     @relation("OwnerBookings")
+  bookingsAsClient Booking[]    @relation("ClientBookings")
+  wallet          Wallet?
+  twoFactorAuth   TwoFactorAuth?
+  loginHistory    LoginHistory[]
+  sessions        UserSession[]
+  tickets         SupportTicket[]
+  ticketMessages  TicketMessage[]
+  notifications   Notification[]
+  auditActions    AuditLog[]         @relation("AdminActions")
+  reversals       ReversalRequest[]  @relation("RequesterReversals")
+  adminReviews    ReversalRequest[]  @relation("AdminReviews")
+  cart            Cart?
+  wishlist        WishlistItem[]
+  reviewsGiven    Review[]     @relation("Reviewer")
+  reviewsReceived Review[]     @relation("Reviewee")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  cartId     String
+  assetId    String
+  itemType   String                // "TRUCK" | "MATERIAL"
+  startDate  DateTime?
+  endDate    DateTime?
+  quantity   Float?                // tons for materials
+  totalCost  Float
+  createdAt  DateTime @default(now())
+
+  cart  Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  asset Asset  @relation(fields: [assetId], references: [id])
+
+  @@index([cartId])
+  @@index([assetId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+  @@index([userId])
+}
+
+model UserSession {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  ipAddress  String?
+  userAgent  String?
+  deviceInfo String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  ipAddress String?
+  userAgent String?
+  deviceInfo String?
+  success   Boolean  @default(true)
+  failReason String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model TwoFactorAuth {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  secret      String
+  backupCodes String
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id                String             @id @default(cuid())
+  ownerId           String
+  type              AssetType
+  title             String
+  description       String?
+  category          String?
+  make              String?
+  model             String?
+  year              Int?
+  plateNumber       String?
+  capacity          Float?
+  unit              String?
+  pricePerDay       Float?
+  pricePerHour      Float?
+  pricePerTon       Float?
+  currency          String             @default("NGN")
+  location          String?
+  state             String?
+  lga               String?
+  availabilityStatus AvailabilityStatus @default(AVAILABLE)
+  isApproved        Boolean            @default(false)
+  approvedBy        String?
+  approvedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  owner           User              @relation(fields: [ownerId], references: [id])
+  images          AssetImage[]
+  maintenanceLogs MaintenanceLog[]
+  fuelLogs        FuelLog[]
+  bookings        Booking[]
+  transactions    Transaction[]
+  cartItems       CartItem[]
+  reviews         Review[]
+  wishlisted      WishlistItem[]
+
+  @@index([ownerId])
+  @@index([type])
+  @@index([availabilityStatus])
+  @@index([isApproved])
+  @@index([state])
+}
+
+model AssetImage {
+  id        String   @id @default(cuid())
+  assetId   String
+  url       String
+  publicId  String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+
+model MaintenanceLog {
+  id              String          @id @default(cuid())
+  assetId         String
+  performedBy     String?
+  maintenanceType MaintenanceType
+  description     String?
+  cost            Float?
+  currency        String          @default("NGN")
+  vendorName      String?
+  vendorPhone     String?
+  odometerReading Float?
+  nextDueDate     DateTime?
+  nextDueOdometer Float?
+  receiptUrl      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([maintenanceType])
+}
+
+model FuelLog {
+  id             String   @id @default(cuid())
+  assetId        String
+  driverId       String?
+  date           DateTime @default(now())
+  litersIssued   Float?
+  costPerLiter   Float?
+  totalCost      Float?
+  currency       String   @default("NGN")
+  odometerReading Float?
+  fuelStation    String?
+  attendant      String?
+  issuedBy       String?
+  receiptUrl     String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([date])
+}
+
+model Driver {
+  id              String             @id @default(cuid())
+  ownerId         String
+  fullName        String
+  phone           String?
+  email           String?
+  licenseNumber   String?
+  licenseClass    String?
+  licenseExpiry   DateTime?
+  address         String?
+  state           String?
+  photoUrl        String?
+  status          String             @default("ACTIVE")
+  dateOfJoining   DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  owner    User             @relation(fields: [ownerId], references: [id])
+  payments DriverPayment[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model DriverPayment {
+  id          String      @id @default(cuid())
+  driverId    String
+  paymentType PaymentType
+  amount      Float
+  currency    String      @default("NGN")
+  periodStart DateTime?
+  periodEnd   DateTime?
+  description String?
+  paidAt      DateTime?
+  paidBy      String?
+  createdAt   DateTime    @default(now())
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+}
+
+model Transaction {
+  id          String             @id @default(cuid())
+  ownerId     String
+  category    TransactionCategory
+  subCategory String?
+  description String?
+  amount      Float
+  currency    String             @default("NGN")
+  assetId     String?
+  driverId    String?
+  bookingId   String?
+  reference   String?
+  date        DateTime           @default(now())
+  createdAt   DateTime           @default(now())
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  asset   Asset? @relation(fields: [assetId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([date])
+  @@index([assetId])
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  assetId       String
+  clientId      String
+  ownerId       String
+  startDate     DateTime
+  endDate       DateTime
+  totalCost     Float
+  currency      String        @default("NGN")
+  status        BookingStatus @default(PENDING)
+  purpose       String?
+  pickupLocation String?
+  dropoffLocation String?
+  clientNote    String?
+  ownerNote     String?
+  cancelledAt   DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  asset       Asset         @relation(fields: [assetId], references: [id])
+  client      User          @relation("ClientBookings", fields: [clientId], references: [id])
+  owner       User          @relation("OwnerBookings", fields: [ownerId], references: [id])
+  transactions     Transaction[]
+  walletTransactions WalletTransaction[]
+  reviews          Review[]
+
+  @@index([clientId])
+  @@index([ownerId])
+  @@index([assetId])
+  @@index([status])
+}
+
+model Wallet {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  monnifyAccountReference String?
+  nubanAccountNumber     String?
+  bankName               String?
+  bankCode               String?
+  accountName            String?
+  balance                Float    @default(0)
+  currency               String   @default("NGN")
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+  withdrawals Withdrawal[]
+}
+
+model WalletTransaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  type        String
+  amount      Float
+  currency    String   @default("NGN")
+  description String?
+  reference   String?
+  monnifyRef  String?
+  balanceBefore Float?
+  balanceAfter  Float?
+  metadata    Json?
+  bookingId   String?
+  createdAt   DateTime @default(now())
+
+  wallet  Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([walletId])
+  @@index([reference])
+  @@index([bookingId])
+}
+
+model Withdrawal {
+  id                String   @id @default(cuid())
+  walletId          String
+  amount            Float
+  currency          String   @default("NGN")
+  destinationBank   String?
+  destinationAccount String?
+  accountName       String?
+  reference         String?
+  monnifyRef        String?
+  status            String   @default("PENDING_OTP")
+  otpCode           String?
+  otpExp            DateTime?
+  otpVerified       Boolean  @default(false)
+  narration         String?
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([status])
+}
+
+model ReversalRequest {
+  id              String          @id @default(cuid())
+  requesterId     String
+  transactionId   String?
+  bookingId       String?
+  reason          String
+  evidenceUrl     String?
+  amount          Float
+  currency        String          @default("NGN")
+  status          ReversalStatus  @default(PENDING)
+  adminId         String?
+  adminNote       String?
+  monnifyReversalRef String?
+  createdAt       DateTime        @default(now())
+  reviewedAt      DateTime?
+  processedAt     DateTime?
+
+  requester User  @relation("RequesterReversals", fields: [requesterId], references: [id])
+  admin     User? @relation("AdminReviews", fields: [adminId], references: [id])
+
+  @@index([requesterId])
+  @@index([status])
+}
+
+model SupportTicket {
+  id              String         @id @default(cuid())
+  ticketNumber    String         @unique
+  creatorId       String
+  assignedTo      String?
+  category        String?
+  subject         String
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus   @default(OPEN)
+  escalatedAt     DateTime?
+  escalatedBy     String?
+  escalationReason String?
+  slaDeadline     DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  creator  User            @relation(fields: [creatorId], references: [id])
+  messages TicketMessage[]
+
+  @@index([ticketNumber])
+  @@index([creatorId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([priority])
+}
+
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   String
+  senderId   String
+  senderRole String
+  message    String?
+  attachments Json?
+  createdAt  DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User         @relation(fields: [senderId], references: [id])
+
+  @@index([ticketId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  resource   String?
+  resourceId String?
+  detail     String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  admin User @relation("AdminActions", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SmtpSettings {
+  id        String   @id @default(cuid())
+  host      String
+  port      Int      @default(587)
+  username  String
+  password  String
+  fromEmail String
+  fromName  String?
+  secure    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformSettings {
+  id              String  @id @default(cuid())
+  companyName     String  @default("TruckLease Pro")
+  appName         String  @default("TruckLease Pro")
+  logoUrl         String?
+  faviconUrl      String?
+
+  monnifyApiKey       String  @default("")
+  monnifySecretKey    String  @default("")
+  monnifyContractCode String  @default("")
+  monnifyBaseUrl      String  @default("https://sandbox.monnify.com")
+
+  platformFee        Float   @default(3.0)
+  escrowReleaseDelay Int     @default(48)
+  minDeposit         Float   @default(25.0)
+  reversalFee        Float   @default(5000)
+
+  contactAddress String? @default("42 Awolowo Road, Ikoyi, Lagos")
+  contactPhone   String? @default("+234 800 TRUCKLEASE")
+  contactEmail   String? @default("support@truckleasepro.com")
+  contactHours   String? @default("Mon\u2013Fri: 8:00 AM \u2013 6:00 PM, Sat: 9:00 AM \u2013 3:00 PM")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String?
+  type      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String
+  reviewerId String
+  revieweeId String
+  assetId   String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  reviewer User   @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee User   @relation("Reviewee", fields: [revieweeId], references: [id])
+  asset    Asset  @relation(fields: [assetId], references: [id])
+
+  @@unique([bookingId, reviewerId])
+  @@index([assetId])
+  @@index([revieweeId])
+}
+
+model EscrowTransaction {
+  id            String   @id @default(cuid())
+  bookingId     String
+  fromWalletId  String
+  toWalletId    String?
+  amount        Float
+  currency      String   @default("NGN")
+  status        String   @default("HELD")
+  releasedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model AssetCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model State {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lgas LGA[]
+
+  @@index([slug])
+}
+
+model LGA {
+  id        String   @id @default(cuid())
+  stateId   String
+  name      String   @unique
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  @@index([stateId])
+  @@index([slug])
+}

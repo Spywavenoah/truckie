@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary: #CC0000;
+  --color-primary-dark: #990000;
+  --color-accent: #002366;
+  --color-accent-light: #0035A0;
+  --color-neutral-white: #FFFFFF;
+  --color-neutral-50: #F8F9FA;
+  --color-neutral-100: #E9ECEF;
+  --color-neutral-200: #DEE2E6;
+  --color-neutral-300: #CED4DA;
+  --color-neutral-400: #ADB5BD;
+  --color-neutral-500: #6C757D;
+  --color-neutral-700: #343A40;
+  --color-neutral-900: #111827;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Sora", "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--color-neutral-white);
+  --color-foreground: var(--color-neutral-900);
+  --color-muted: var(--color-neutral-500);
+  --color-muted-foreground: var(--color-neutral-700);
+  --color-border: var(--color-neutral-200);
+  --color-input: var(--color-neutral-100);
+  --color-ring: var(--color-accent-light);
+  --color-destructive: var(--color-danger);
+  --color-card: var(--color-neutral-white);
+  --color-card-foreground: var(--color-neutral-900);
+  --color-popover: var(--color-neutral-white);
+  --color-popover-foreground: var(--color-neutral-900);
+  --color-secondary: var(--color-neutral-100);
+  --color-secondary-foreground: var(--color-neutral-900);
+  --color-accent-foreground: var(--color-neutral-white);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --animate-in: spin-in 0.2s ease-out;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-700);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    color: var(--color-neutral-900);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  .brand-header-band {
+    @apply relative overflow-hidden;
+  }
+
+  .brand-header-band::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 50%, transparent 50.5%);
+  }
+
+  .brand-header-band.equipment::before {
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent) 50%, transparent 50.5%);
+  }
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: white;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@utility btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: var(--color-accent);
+  background-color: white;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s, color 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-accent);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: var(--color-neutral-700);
+  background-color: transparent;
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-neutral-100);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

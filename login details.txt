@@ -1,0 +1,7 @@
+Login seed credentials: 
+
+admin@truckleasepro.com / Admin@123;
+owners chinedu@example.com / amina@example.com;
+clients emeka@example.com / fati@example.com;
+
+all non-admin password: User@123
