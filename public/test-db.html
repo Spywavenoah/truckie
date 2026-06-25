@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truckie - Database Connection Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(to bottom right, #f8fafc, #e2e8f0);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+    }
+    
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: #475569;
+      margin-bottom: 2rem;
+    }
+    
+    .button {
+      display: inline-block;
+      padding: 0.5rem 1.5rem;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      margin-bottom: 2rem;
+    }
+    
+    .button:hover {
+      background-color: #1d4ed8;
+    }
+    
+    .button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .results {
+      display: grid;
+      gap: 1rem;
+    }
+    
+    .result-item {
+      padding: 1rem;
+      border-radius: 0.375rem;
+      border-left: 4px solid;
+    }
+    
+    .result-item.success {
+      background-color: #f0fdf4;
+      border-color: #4ade80;
+    }
+    
+    .result-item.error {
+      background-color: #fef2f2;
+      border-color: #f87171;
+    }
+    
+    .result-item.loading {
+      background-color: #eff6ff;
+      border-color: #3b82f6;
+    }
+    
+    .result-title {
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 0.25rem;
+    }
+    
+    .result-error {
+      font-size: 0.875rem;
+      color: #dc2626;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .info-box {
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      margin-top: 2rem;
+      font-size: 0.875rem;
+      color: #374151;
+    }
+    
+    .info-box h3 {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .info-box ul {
+      list-style: disc;
+      padding-left: 1.5rem;
+      line-height: 1.6;
+    }
+    
+    .summary {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+    
+    .summary strong {
+      color: #1f2937;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>🚚 Truckie Database Connection Test</h1>
+      <p class="subtitle">Testing Neon Postgres database connectivity and data reading</p>
+      
+      <button class="button" id="runBtn" onclick="runTests()">Run Tests</button>
+      
+      <div id="results" class="results">
+        <div class="empty-state">Click "Run Tests" to start testing the database connection</div>
+      </div>
+      
+      <div class="info-box">
+        <h3>What This Tests:</h3>
+        <ul>
+          <li>Database connection to Neon Postgres</li>
+          <li>Reading from User table</li>
+          <li>Reading from Asset table</li>
+          <li>Reading from Booking table</li>
+          <li>Reading from State table</li>
+          <li>Reading from Transaction table</li>
+          <li>Reading from Driver table</li>
+          <li>Reading from Maintenance Logs table</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function runTests() {
+      const button = document.getElementById('runBtn');
+      const resultsDiv = document.getElementById('results');
+      
+      button.disabled = true;
+      resultsDiv.innerHTML = '<div class="result-item loading"><span class="spinner"></span>Running tests...</div>';
+      
+      try {
+        const response = await fetch('/api/test-db-public');
+        const data = await response.json();
+        
+        resultsDiv.innerHTML = '';
+        
+        if (data.success) {
+          // Success summary
+          const summary = document.createElement('div');
+          summary.className = 'summary';
+          summary.innerHTML = `<strong>✓ All tests passed!</strong> ${data.summary.passed}/${data.summary.totalTests} tests successful.`;
+          resultsDiv.appendChild(summary);
+        }
+        
+        // Display each result
+        data.results.forEach(result => {
+          const resultDiv = document.createElement('div');
+          resultDiv.className = `result-item ${result.status}`;
+          
+          let html = `<div class="result-title">${result.message}</div>`;
+          
+          if (result.error) {
+            html += `<div class="result-error">${result.error}</div>`;
+          }
+          
+          if (result.sample && result.sample.length > 0) {
+            html += `<details style="margin-top: 0.5rem;"><summary style="cursor: pointer; color: #6b7280; font-size: 0.875rem;">View Sample Data (${result.sample.length} items)</summary><pre style="margin-top: 0.5rem; padding: 0.5rem; background: #f5f5f5; border-radius: 0.25rem; overflow-x: auto; font-size: 0.75rem; color: #374151; max-height: 15rem;">${JSON.stringify(result.sample, null, 2)}</pre></details>`;
+          }
+          
+          resultDiv.innerHTML = html;
+          resultsDiv.appendChild(resultDiv);
+        });
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result-item error"><div class="result-title">✗ Test Failed</div><div class="result-error">${error.message}</div></div>`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
