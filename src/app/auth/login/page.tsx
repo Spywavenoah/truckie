@@ -3,7 +3,8 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { loginAction } from "@/app/actions/auth";
+import { useSession } from "next-auth/react";
 import { toast } from "@/components/ui/toaster";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "";
   const registered = searchParams.get("registered");
+  const { data: session } = useSession();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +28,18 @@ function LoginForm() {
       toast("Registration successful!", { variant: "success", description: "Please check your email for the verification code." });
     }
   }, [registered]);
+
+  useEffect(() => {
+    if (session?.user) {
+      const role = (session.user as any).role || "CLIENT";
+      const dashboardMap: Record<string, string> = {
+        OWNER: "/dashboard/owner/overview",
+        CLIENT: "/dashboard/client/overview",
+        ADMIN: "/admin/dashboard",
+      };
+      router.push(callbackUrl || dashboardMap[role] || "/dashboard/client/overview");
+    }
+  }, [session, router, callbackUrl]);
 
   async function resendVerification() {
     setResending(true);
@@ -56,48 +70,25 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      const result = await loginAction(email, password);
 
-      if (result?.error) {
-        if (result.error.includes("verify your email")) {
+      if (!result.success) {
+        if (result.error?.includes("verify your email")) {
           setError("Please verify your email before logging in. Check your inbox for the OTP.");
           toast("Email not verified", { variant: "warning", description: "Please verify your email before logging in." });
         } else {
           setError("Invalid email or password");
-          toast("Login failed", { variant: "error", description: "Invalid email or password" });
+          toast("Login failed", { variant: "error", description: result.error || "Invalid email or password" });
         }
         setLoading(false);
         return;
       }
 
       toast("Welcome back!", { variant: "success" });
-
-      const sessionRes = await fetch("/api/auth/session");
-      const session = await sessionRes.json();
-
-      if (session?.user?.requires2FA) {
-        router.push("/auth/2fa");
-        return;
-      }
-
-      if (!session?.user?.has2FA) {
-        toast("Tip: Set up two-factor authentication to secure your account.", { variant: "info" });
-      }
-
-      const role = session?.user?.role || "CLIENT";
-      const dashboardMap: Record<string, string> = {
-        OWNER: "/dashboard/owner/overview",
-        CLIENT: "/dashboard/client/overview",
-        ADMIN: "/admin/dashboard",
-      };
-      router.push(callbackUrl || dashboardMap[role] || "/dashboard/client/overview");
       router.refresh();
-    } catch {
+    } catch (err) {
       setError("An error occurred. Please try again.");
+      toast("Error", { variant: "error", description: "An unexpected error occurred" });
     } finally {
       setLoading(false);
     }
