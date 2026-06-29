@@ -19,6 +19,8 @@ const publicRoutes = [
   "/api/auth",
   "/api/webhooks",
   "/api/assets",
+  "/api/test-db-public",
+  "/api/seed",
   "/_next",
   "/images",
 ];
