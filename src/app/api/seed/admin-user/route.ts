@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,14 +36,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create admin profile
-    await prisma.admin.create({
-      data: {
-        userId: admin.id,
-        department: "Administration",
-      },
-    });
-
     return NextResponse.json(
       {
         success: true,
@@ -65,8 +55,6 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -110,7 +98,5 @@ export async function GET(req: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
